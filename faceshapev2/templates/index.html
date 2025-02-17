@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Shape Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        .video-container {
+            position: relative;
+            margin: 20px 0;
+        }
+        
+        #videoElement {
+            width: 100%;
+            border: 2px solid #333;
+            border-radius: 8px;
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        
+        .shape-info {
+            margin-top: 10px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Face Shape Analysis</h1>
+        
+        <div class="video-container">
+            <video id="videoElement" autoplay playsinline></video>
+        </div>
+        
+        <div class="results">
+            <h2>Detected Face Shape: <span id="faceShapeResult">Analyzing...</span></h2>
+            <div class="shape-info" id="shapeDescription"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="startButton">Start Camera</button>
+            <button id="captureButton">Capture Image</button>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('videoElement');
+        const startButton = document.getElementById('startButton');
+        const captureButton = document.getElementById('captureButton');
+        const faceShapeResult = document.getElementById('faceShapeResult');
+        const shapeDescription = document.getElementById('shapeDescription');
+        
+        startButton.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+            }
+        });
+        
+        // Note: The actual face shape detection would be handled by
+        // the Python backend, with results being displayed here
+        // This is just the frontend interface
+    </script>
+</body>
+</html>
