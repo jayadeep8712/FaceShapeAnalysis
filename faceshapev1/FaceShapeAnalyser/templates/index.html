@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CurllStyle - Face Shape Detection</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/index.css">
+</head>
+
+<body>
+    <header>
+        <h1><i class="fas fa-robot"></i> Face Shape Analysis</h1>
+    </header>
+
+    <div class="container">
+        <div class="dashboard">
+            <div class="video-container">
+                <div class="video-overlay">
+                    <i class="fas fa-circle" style="color: #ff4444;"></i> Live Feed
+                </div>
+                <img src="{{ url_for('video_feed') }}" alt="Video Stream">
+            </div>
+
+            <div class="controls-panel">
+                <form class="upload-form" action="/upload" method="POST" enctype="multipart/form-data">
+                    <div class="file-input-wrapper">
+                        <label for="file" class="custom-file-upload">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Drop your image here or click to upload</span>
+                        </label>
+                        <input type="file" name="file" id="file">
+                    </div>
+                    <button type="submit">
+                        <i class="fas fa-wand-magic-sparkles"></i>
+                        Analyze Face Shape
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="result">
+            {% if face_shape %}
+            <h2>Analysis Results</h2>
+            <div class="metrics">
+                <div class="metric-card">
+                    <i class="fas fa-puzzle-piece"></i>
+                    <h3>Face Shape</h3>
+                    <p style="color: var(--violet-dark);">{{ face_shape }}</p>
+                </div>
+                <div class="metric-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Confidence</h3>
+                    <p class="confidence">{{ confidence }}%</p>
+                </div>
+                <div class="metric-card">
+                    <i class="fas fa-clock"></i>
+                    <h3>Process Time</h3>
+                    <p>0.5 seconds</p>
+                </div>
+            </div>
+            {% else %}
+            <i class="fas fa-camera" style="font-size: 2.5rem; color: var(--violet-light);"></i>
+            <h2>Ready to Analyze</h2>
+            <p>Upload an image or use the camera for instant face shape detection</p>
+            {% endif %}
+        </div>
+
+        {% if uploaded_image_url %}
+        <div class="uploaded-image w-full">
+            <h3><i class="fas fa-image"></i> Analyzed Image</h3>
+            <img id="preview" src="{{ url_for('static', filename='uploads/' + uploaded_image_url.split('/')[-1]) }}"
+                alt=" Uploaded Preview">
+        </div>
+        {% endif %}
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <i class="fas fa-shapes"></i>
+                <h3>Multiple Face Shapes</h3>
+                <p>Accurately detects various face shapes including oval, round, square, heart, and diamond</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-tachometer-alt"></i>
+                <h3>Real-time Analysis</h3>
+                <p>Instant face shape detection with live camera feed</p>
+            </div>
+            <div class="feature-card">
+                <i class="fas fa-chart-pie"></i>
+                <h3>Detailed Metrics</h3>
+                <p>Get comprehensive analysis with confidence scores</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        <i class="fas"></i>
+        <span id="notificationMessage"></span>
+    </div>
+
+
+    <script>
+        // File Upload Preview and Validation
+        const fileInput = document.getElementById('file');
+        const imagePreview = document.getElementById('imagePreview');
+        const preview = document.getElementById('preview');
+        const uploadForm = document.getElementById('uploadForm');
+        const notification = document.getElementById('notification');
+
+        function showNotification(message, type) {
+            const notif = document.getElementById('notification');
+            const icon = notif.querySelector('i');
+            const messageSpan = document.getElementById('notificationMessage');
+
+            // Set icon and message
+            icon.className = type === 'success'
+                ? 'fas fa-check-circle'
+                : 'fas fa-exclamation-circle';
+
+            messageSpan.textContent = message;
+
+            // Set notification type
+            notif.className = `notification ${type}`;
+
+            // Show notification
+            setTimeout(() => notif.classList.add('show'), 100);
+
+            // Hide notification after 3 seconds
+            setTimeout(() => {
+                notif.classList.remove('show');
+            }, 3000);
+        }
+
+        fileInput.addEventListener('change', function (e) {
+            if (e.target.files && e.target.files[0]) {
+                const file = e.target.files[0];
+
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    showNotification('Please select a valid image file (JPEG, PNG, GIF, WEBP)', 'error');
+                    fileInput.value = '';
+                    return;
+                }
+
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    showNotification('File size should be less than 5MB', 'error');
+                    fileInput.value = '';
+                    return;
+                }
+
+                // Show image preview
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    showNotification('Image selected successfully', 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        uploadForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            if (!fileInput.files || !fileInput.files[0]) {
+                showNotification('Please select a file to upload', 'error');
+                return;
+            }
+
+            const formData = new FormData(this);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Upload failed');
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    showNotification('File uploaded and analyzed successfully', 'success');
+                    document.documentElement.innerHTML = html;
+                    // Reinitialize the scripts after HTML update
+                    const scripts = document.getElementsByTagName('script');
+                    for (let script of scripts) {
+                        eval(script.innerHTML);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error uploading file. Please try again.', 'error');
+                });
+        });
+
+        // Drag and drop functionality
+        const dropZone = document.querySelector('.custom-file-upload');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.style.border = '2px dashed var(--pink-light)';
+            dropZone.style.background = 'rgba(255, 192, 203, 0.1)';
+        }
+
+        function unhighlight(e) {
+            dropZone.style.border = '2px dashed var(--violet-light)';
+            dropZone.style.background = 'linear-gradient(to right, #f3f4f6, #ffffff)';
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+
+            // Trigger change event
+            const event = new Event('change');
+            fileInput.dispatchEvent(event);
+        }
+
+    </script>
+</body>
+
+</html>
